@@ -1,0 +1,1 @@
+console.log("Nobel Prize Dashboard loaded.");
