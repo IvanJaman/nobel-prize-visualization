@@ -70,3 +70,30 @@ h2 {
     font-size: 36px;
     font-weight: bold;
 }
+
+#charts-wrapper {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    margin-top: 40px;
+    gap: 40px;
+}
+
+#countryChart, #categoryChart {
+    flex: 1;
+}
+
+#chart-container {
+    margin-top: 40px;
+    padding: 20px;
+    color: #F5F5F5;
+}
+
+#countryChart svg {
+    display: block;
+    margin: auto;
+}
+
+svg text {
+    font-family: Arial, sans-serif;
+}

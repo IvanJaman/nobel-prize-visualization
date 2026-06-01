@@ -19,30 +19,42 @@
         <h2>Interaktivna vizualizacija Nobelovih nagrada od 1901 do 2025</h2>
     </header>
 
-    <script src="script.js"></script>
-
     <main>
         <section id="stats-container">
             <div class="card stat-card">
                 <div class="stat-title">Ukupan broj dobitnika</div>
-                <div class="stat-value">1012</div>
+                <div class="stat-value">-</div>
             </div>
 
             <div class="card stat-card">
                 <div class="stat-title">Ukupan broj država</div>
-                <div class="stat-value">95</div>
+                <div class="stat-value">-</div>
             </div>
 
             <div class="card stat-card">
                 <div class="stat-title">Država s najviše dobitnika</div>
-                <div class="stat-value">USA</div>
+                <div class="stat-value">-</div>
             </div>
 
             <div class="card stat-card">
                 <div class="stat-title">Kategorija s najviše dobitnika</div>
-                <div class="stat-value">Physics</div>
+                <div class="stat-value">-</div>
             </div>
         </section>
+
+        <section id="charts-wrapper">
+            <section id="chart-container">
+                <h2>Top 10 zemalja po broju dobitnika</h2>
+                <div id="countryChart"></div>
+            </section>
+            <section id="chart-container">
+                <h2>Distribucija kategorija</h2>
+                <div id="categoryChart"></div>
+            </section>
+        </section>
     </main>
+   
+    <script src="script.js"></script>
+
 </body>
 </html>
