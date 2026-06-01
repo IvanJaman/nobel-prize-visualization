@@ -1,6 +1,8 @@
 //učitavanje iz API-ja
 const API_URL = "https://api.nobelprize.org/2.1/laureates?limit=1100&offset=0";
 
+const tooltip = d3.select("#tooltip");
+
 let cleanedData = [];
 
 //čišćenje podataka
@@ -64,7 +66,7 @@ function drawCountryChart(data) {
 
     const width = 800;
     const height = 400;
-    const margin = { top: 20, right: 20, bottom: 60, left: 60 };
+    const margin = { top: 20, right: 20, bottom: 90, left: 60 };
 
     const svg = d3.select("#countryChart")
         .append("svg")
@@ -86,7 +88,7 @@ function drawCountryChart(data) {
 
     const x = d3.scale.ordinal()
         .domain(countryCounts.map(d => d.key))
-        .rangeRoundBands([0, chartWidth], 0.1);
+        .rangeRoundBands([0, chartWidth], 0.2);
 
     const y = d3.scale.linear()
         .domain([0, d3.max(countryCounts, d => d.values)])
@@ -97,18 +99,55 @@ function drawCountryChart(data) {
         .enter()
         .append("rect")
         .attr("class", "bar")
+        .attr("rx", 4)
+        .attr("ry", 4)
         .attr("x", d => x(d.key))
         .attr("y", d => y(d.values))
         .attr("width", x.rangeBand())
         .attr("height", d => chartHeight - y(d.values))
-        .attr("fill", "#D4AF37");
+        .attr("fill", "#D4AF37")
+        .on("mouseover", function(d) {
+            const bar = d3.select(this);
+            const originalY = +bar.attr("y");
+            const originalHeight = +bar.attr("height");
+            bar.transition()
+                .duration(150)
+                .attr("fill", "#F2D675")
+                .attr("width", x.rangeBand() + 8)
+                .attr("x", x(d.key) - 4)
+                .attr("y", originalY - 8)
+                .attr("height", originalHeight + 8);
+            tooltip
+                .style("opacity", 1)
+                .html(
+                    "<strong>" + d.key +
+                    "</strong><br/>Dobitnika: " + d.values
+                );
+        })
+        .on("mousemove", function() {
+            tooltip
+                .style("left", (d3.event.pageX + 10) + "px")
+                .style("top", (d3.event.pageY - 30) + "px");
+        })
+        .on("mouseout", function() {
+
+            d3.select(this)
+                .transition()
+                .duration(150)
+                .attr("fill", "#D4AF37")
+                .attr("width", x.rangeBand())
+                .attr("x", d => x(d.key))
+                .attr("y", d => y(d.values))
+                .attr("height", d => chartHeight - y(d.values));
+            tooltip.style("opacity", 0);
+        })
 
     g.append("g")
         .attr("transform", `translate(0,${chartHeight})`)
         .call(d3.svg.axis().scale(x).orient("bottom"))
         .selectAll("text")
         .style("fill", "#D4AF37")
-        .style("font-size", "10px")
+        .style("font-size", "14px")
         .attr("transform", "rotate(-45)")
         .style("text-anchor", "end");
 
@@ -146,26 +185,26 @@ function drawCategoryDonut(data) {
     const categoryCounts = d3.nest()
         .key(function(d) { return d.category; })
         .rollup(function(v) { return v.length; })
-        .entries(data);
+        .entries(data)
+        .sort((a, b) => b.values - a.values);
 
-    const color = d3.scale.ordinal()
-    .range([
-        "#F2D675", 
-        "#E8C766",
-        "#DDBA55",
-        "#D4AF37", 
-        "#C89E2D",
-        "#B88924",
-        "#A6781C",
-        "#8F6316"
-    ]);
+    const max = d3.max(categoryCounts, d => d.values);
+    const min = d3.min(categoryCounts, d => d.values);
+
+    const color = d3.scale.linear()
+        .domain([min, max])   
+        .range(["#FFF2B2", "#D4AF37"]);
 
     const pie = d3.layout.pie()
         .value(function(d) { return d.values; });
 
     const arc = d3.svg.arc()
-        .innerRadius(radius - 100)
+        .innerRadius(radius - 75)
         .outerRadius(radius - 20);
+
+    const arcHover = d3.svg.arc()
+        .innerRadius(radius - 80)
+        .outerRadius(radius - 10);
 
     const arcs = svg.selectAll("arc")
         .data(pie(categoryCounts))
@@ -173,20 +212,46 @@ function drawCategoryDonut(data) {
         .append("g");
     
     centerGroup.append("text")
-    .attr("text-anchor", "middle")
-    .attr("dy", "-5")
-    .style("fill", "#D4AF37")
-    .style("font-size", "16px")
-    .style("font-weight", "bold")
-    .text("Kategorije");
+        .attr("text-anchor", "middle")
+        .style("fill", "#D4AF37")
+        .style("font-size", "16px")
+        .style("font-weight", "bold")
+        .text("Kategorije");
 
     arcs.append("path")
         .attr("d", arc)
         .style("fill", function(d) {
-            return color(d.data.key);
+            return color(d.data.values);
         })
         .style("stroke", "#0B1F3A")
-        .style("stroke-width", "2px");
+        .style("stroke-width", "2px")
+        .on("mouseover", function(d) {
+            const originalColor = d3.select(this).style("fill");
+            d3.select(this)
+                .transition()
+                .duration(180)
+                .attr("d", arcHover)
+                .style("fill", d3.rgb(originalColor).brighter(1.2));
+            tooltip
+                .style("opacity", 1)
+                .html(
+                    "<strong>" + d.data.key +
+                    "</strong><br/>Dobitnika: " + d.data.values
+                );
+        })
+        .on("mousemove", function() {
+            tooltip
+                .style("left", (d3.event.pageX + 10) + "px")
+                .style("top", (d3.event.pageY - 30) + "px");
+        })
+        .on("mouseout", function(d) {
+            d3.select(this)
+                .transition()
+                .duration(180)
+                .attr("d", arc)
+                .style("fill", color(d.data.values));
+            tooltip.style("opacity", 0);
+        });
 
     arcs.append("text")
         .attr("transform", function(d) {
@@ -197,7 +262,7 @@ function drawCategoryDonut(data) {
         .style("font-weight", "bold")
         .style("font-size", "10px")
         .text(function(d) {
-            return d.data.key.length > 8
+            return d.data.key.length > 10
                 ? d.data.key.substring(0, 8) + "..."
                 : d.data.key;
         });

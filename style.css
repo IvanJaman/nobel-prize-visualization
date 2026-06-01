@@ -109,3 +109,15 @@ svg text {
     box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
     transition: 0.3s;
 }
+
+#tooltip {
+    position: absolute;
+    background: #071426;
+    color: #F2D675;
+    padding: 6px 10px;
+    border: 1px solid #D4AF37;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+}
