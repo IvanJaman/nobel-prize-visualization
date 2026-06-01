@@ -24,6 +24,7 @@ d3.json(API_URL, function(error, data) {
     }));
 
     updateStats(cleanedData);
+    drawTimeline(cleanedData);
     drawCountryChart(cleanedData);
     drawCategoryDonut(cleanedData);
 });
@@ -59,6 +60,85 @@ function getTop(data, field) {
         .sort((a, b) => b.values - a.values);
 
     return counts[0]?.key || "N/A";
+}
+
+//timeline chart
+function drawTimeline(data) {
+
+    const width = 1400;
+    const height = 500;
+    const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
+
+    const svg = d3.select("#timelineChart")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    const g = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const yearCounts = d3.nest()
+        .key(d => d.year)
+        .rollup(v => v.length)
+        .entries(data)
+        .filter(d => d.key !== "Unknown")
+        .sort((a, b) => +a.key - +b.key);
+
+    const x = d3.scale.linear()
+        .domain(d3.extent(yearCounts, d => +d.key))
+        .range([0, chartWidth]);
+
+    const y = d3.scale.linear()
+        .domain([0, d3.max(yearCounts, d => d.values)])
+        .range([chartHeight, 0]);
+
+    const line = d3.svg.line()
+        .x(d => x(+d.key))
+        .y(d => y(d.values));
+
+    g.append("path")
+        .datum(yearCounts)
+        .attr("fill", "none")
+        .attr("stroke", "#D4AF37")
+        .attr("stroke-width", 2)
+        .attr("d", line);
+
+    g.selectAll("circle")
+        .data(yearCounts)
+        .enter()
+        .append("circle")
+        .attr("cx", d => x(+d.key))
+        .attr("cy", d => y(d.values))
+        .attr("r", 3)
+        .attr("fill", "#F2D675");
+
+    g.append("g")
+        .attr("transform", `translate(0,${chartHeight})`)
+        .call(d3.svg.axis().scale(x).orient("bottom"))
+        .selectAll("text")
+        .style("fill", "#D4AF37")
+        .style("font-size", "14px");
+
+    g.append("g")
+        .call(d3.svg.axis().scale(y).orient("left"))
+        .selectAll("text")
+        .style("fill", "#D4AF37")
+        .style("font-size", "12px");
+
+    g.selectAll(".domain, .tick line")
+        .style("stroke", "#D4AF37");
+
+    g.append("text")
+        .attr("x", chartWidth / 2)
+        .attr("y", -5)
+        .attr("text-anchor", "middle")
+        .style("fill", "#D4AF37")
+        .style("font-size", "18px")
+        .style("font-weight", "bold")
+        .text("BROJ DOBITNIKA PO GODINAMA");
 }
 
 //bar chart koji prikazuje top 10 država po broju dobitnika
@@ -163,7 +243,7 @@ function drawCountryChart(data) {
         .style("fill", "#D4AF37")
         .style("font-size", "18px")
         .style("font-weight", "bold")
-        .text("Top 10 država po broju dobitnika");
+        .text("TOP 10 DRŽAVA PO BROJU DOBITNIKA");
 }
 
 //donut chart koji prikazuje distribuciju kategorija
@@ -216,7 +296,7 @@ function drawCategoryDonut(data) {
         .style("fill", "#D4AF37")
         .style("font-size", "16px")
         .style("font-weight", "bold")
-        .text("Kategorije");
+        .text("KATEGORIJE");
 
     arcs.append("path")
         .attr("d", arc)
@@ -260,7 +340,7 @@ function drawCategoryDonut(data) {
         .attr("text-anchor", "middle")
         .style("fill", "#071426")
         .style("font-weight", "bold")
-        .style("font-size", "10px")
+        .style("font-size", "12px")
         .text(function(d) {
             return d.data.key.length > 10
                 ? d.data.key.substring(0, 8) + "..."

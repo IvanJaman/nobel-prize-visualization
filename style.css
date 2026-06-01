@@ -71,6 +71,12 @@ h2 {
     font-weight: bold;
 }
 
+#timelineChart {
+    display: flex;
+    justify-content: center;
+    margin: 40px 20px;
+}
+
 #charts-wrapper {
     display: flex;
     justify-content: space-between;
