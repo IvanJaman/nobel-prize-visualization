@@ -116,6 +116,15 @@ function drawCountryChart(data) {
         .call(d3.svg.axis().scale(y).orient("left"))
         .selectAll("text")
         .style("fill", "#D4AF37");
+
+    g.append("text")
+        .attr("x", chartWidth / 2)
+        .attr("y", -5)
+        .attr("text-anchor", "middle")
+        .style("fill", "#D4AF37")
+        .style("font-size", "18px")
+        .style("font-weight", "bold")
+        .text("Top 10 država po broju dobitnika");
 }
 
 //donut chart koji prikazuje distribuciju kategorija
@@ -131,6 +140,8 @@ function drawCategoryDonut(data) {
         .attr("height", height)
         .append("g")
         .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+    const centerGroup = svg.append("g");
 
     const categoryCounts = d3.nest()
         .key(function(d) { return d.category; })
@@ -160,6 +171,14 @@ function drawCategoryDonut(data) {
         .data(pie(categoryCounts))
         .enter()
         .append("g");
+    
+    centerGroup.append("text")
+    .attr("text-anchor", "middle")
+    .attr("dy", "-5")
+    .style("fill", "#D4AF37")
+    .style("font-size", "16px")
+    .style("font-weight", "bold")
+    .text("Kategorije");
 
     arcs.append("path")
         .attr("d", arc)
@@ -178,6 +197,8 @@ function drawCategoryDonut(data) {
         .style("font-weight", "bold")
         .style("font-size", "10px")
         .text(function(d) {
-            return d.data.key;
+            return d.data.key.length > 8
+                ? d.data.key.substring(0, 8) + "..."
+                : d.data.key;
         });
 }
