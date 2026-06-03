@@ -3,6 +3,8 @@ const API_URL = "https://api.nobelprize.org/2.1/laureates?limit=1100&offset=0";
 
 const tooltip = d3.select("#tooltip");
 
+const themeToggle = document.getElementById("themeToggle");
+
 let cleanedData = [];
 
 //čišćenje podataka
@@ -24,6 +26,25 @@ d3.json(API_URL, function(error, data) {
     }));
 
     updateStats(cleanedData);
+    drawTimeline(cleanedData);
+    drawCountryChart(cleanedData);
+    drawCategoryDonut(cleanedData);
+});
+
+themeToggle.addEventListener("click", () => {
+
+    document.body.classList.toggle("light-mode");
+
+    if (document.body.classList.contains("light-mode")) {
+        themeToggle.textContent = "Dark Mode";
+    } else {
+        themeToggle.textContent = "Light Mode";
+    }
+
+    d3.select("#timelineChart").html("");
+    d3.select("#countryChart").html("");
+    d3.select("#categoryChart").html("");
+
     drawTimeline(cleanedData);
     drawCountryChart(cleanedData);
     drawCategoryDonut(cleanedData);
@@ -62,15 +83,28 @@ function getTop(data, field) {
     return counts[0]?.key || "N/A";
 }
 
+//pomoćna fnkcija za mijenjanje teme 
+function getTheme() {
+    const styles = getComputedStyle(document.body);
+
+    return {
+        accent: styles.getPropertyValue("--accent").trim(),
+        accentLight: styles.getPropertyValue("--accent-light").trim(),
+        donutText: styles.getPropertyValue("--donut-text").trim()
+    };
+}
+
 //timeline chart
 function drawTimeline(data) {
 
     const width = 1400;
     const height = 500;
-    const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+    const margin = { top: 20, right: 20, bottom: 70, left: 50 };
 
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
+
+    const theme = getTheme();
 
     const svg = d3.select("#timelineChart")
         .append("svg")
@@ -95,6 +129,14 @@ function drawTimeline(data) {
         .domain([0, d3.max(yearCounts, d => d.values)])
         .range([chartHeight, 0]);
 
+    xScale = d3.scale.linear()
+        .domain(d3.extent(yearCounts, d => +d.key))
+        .range([0, chartWidth]);
+
+    yScale = d3.scale.linear()
+        .domain([0, d3.max(yearCounts, d => d.values)])
+        .range([chartHeight, 0]);
+
     const line = d3.svg.line()
         .x(d => x(+d.key))
         .y(d => y(d.values));
@@ -102,8 +144,8 @@ function drawTimeline(data) {
     g.append("path")
         .datum(yearCounts)
         .attr("fill", "none")
-        .attr("stroke", "#D4AF37")
-        .attr("stroke-width", 2)
+        .attr("stroke", theme.accent)
+        .attr("stroke-width", 4)
         .attr("d", line);
 
     g.selectAll("circle")
@@ -112,30 +154,73 @@ function drawTimeline(data) {
         .append("circle")
         .attr("cx", d => x(+d.key))
         .attr("cy", d => y(d.values))
-        .attr("r", 3)
-        .attr("fill", "#F2D675");
+        .attr("r", 5)
+        .attr("fill", theme.accentLight)
+        .on("mouseover", function (d) {
+            d3.select(this)
+                .transition()
+                .duration(150)
+                .attr("r", 8);
+            tooltip
+                .style("opacity", 1)
+                .html(
+                    `<strong>Year:</strong> ${d.key}<br/>
+                    <strong>Winners:</strong> ${d.values}`
+                );
+        })
+        .on("mousemove", function () {
+            tooltip
+                .style("left", (d3.event.pageX + 10) + "px")
+                .style("top", (d3.event.pageY - 30) + "px");
+        })
+        .on("mouseout", function () {
+            d3.select(this)
+                .transition()
+                .duration(150)
+                .attr("r", 5);
+            tooltip
+                .style("opacity", 0);
+        });
 
     g.append("g")
         .attr("transform", `translate(0,${chartHeight})`)
         .call(d3.svg.axis().scale(x).orient("bottom"))
         .selectAll("text")
-        .style("fill", "#D4AF37")
-        .style("font-size", "14px");
+        .style("fill", theme.accent)
+        .style("font-size", "18px");
+
+    g.append("text")
+        .attr("x", chartWidth / 2)
+        .attr("y", chartHeight + 60)
+        .attr("text-anchor", "middle")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
+        .text("Godine");
 
     g.append("g")
         .call(d3.svg.axis().scale(y).orient("left"))
         .selectAll("text")
-        .style("fill", "#D4AF37")
-        .style("font-size", "12px");
+        .style("fill", theme.accent)
+        .style("font-size", "18px");
 
-    g.selectAll(".domain, .tick line")
-        .style("stroke", "#D4AF37");
+    g.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -chartHeight / 2)
+        .attr("y", -35)
+        .attr("text-anchor", "middle")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
+        .text("Broj dobitnika");
+
+    g.selectAll(".x.axis, .y.axis")
+    .style("stroke", theme.accent)
+    .style("fill", theme.accent);
 
     g.append("text")
         .attr("x", chartWidth / 2)
         .attr("y", -5)
         .attr("text-anchor", "middle")
-        .style("fill", "#D4AF37")
+        .style("fill", theme.accent)
         .style("font-size", "18px")
         .style("font-weight", "bold")
         .text("BROJ DOBITNIKA PO GODINAMA");
@@ -146,7 +231,9 @@ function drawCountryChart(data) {
 
     const width = 800;
     const height = 400;
-    const margin = { top: 20, right: 20, bottom: 90, left: 60 };
+    const margin = { top: 20, right: 20, bottom: 140, left: 60 };
+
+    const theme = getTheme();
 
     const svg = d3.select("#countryChart")
         .append("svg")
@@ -185,14 +272,14 @@ function drawCountryChart(data) {
         .attr("y", d => y(d.values))
         .attr("width", x.rangeBand())
         .attr("height", d => chartHeight - y(d.values))
-        .attr("fill", "#D4AF37")
+        .attr("fill", theme.accent)
         .on("mouseover", function(d) {
             const bar = d3.select(this);
             const originalY = +bar.attr("y");
             const originalHeight = +bar.attr("height");
             bar.transition()
                 .duration(150)
-                .attr("fill", "#F2D675")
+                .attr("fill", theme.accentLight)
                 .attr("width", x.rangeBand() + 8)
                 .attr("x", x(d.key) - 4)
                 .attr("y", originalY - 8)
@@ -214,7 +301,7 @@ function drawCountryChart(data) {
             d3.select(this)
                 .transition()
                 .duration(150)
-                .attr("fill", "#D4AF37")
+                .attr("fill", theme.accent)
                 .attr("width", x.rangeBand())
                 .attr("x", d => x(d.key))
                 .attr("y", d => y(d.values))
@@ -226,21 +313,38 @@ function drawCountryChart(data) {
         .attr("transform", `translate(0,${chartHeight})`)
         .call(d3.svg.axis().scale(x).orient("bottom"))
         .selectAll("text")
-        .style("fill", "#D4AF37")
-        .style("font-size", "14px")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
         .attr("transform", "rotate(-45)")
         .style("text-anchor", "end");
+
+    g.append("text")
+        .attr("x", chartWidth - 8)
+        .attr("y", chartHeight + 40)
+        .attr("text-anchor", "middle")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
+        .text("Države");
 
     g.append("g")
         .call(d3.svg.axis().scale(y).orient("left"))
         .selectAll("text")
-        .style("fill", "#D4AF37");
+        .style("fill", theme.accent)
+
+    g.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -chartHeight / 2)
+        .attr("y", -45)
+        .attr("text-anchor", "middle")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
+        .text("Broj dobitnika");
 
     g.append("text")
         .attr("x", chartWidth / 2)
         .attr("y", -5)
         .attr("text-anchor", "middle")
-        .style("fill", "#D4AF37")
+        .style("fill", theme.accent)
         .style("font-size", "18px")
         .style("font-weight", "bold")
         .text("TOP 10 DRŽAVA PO BROJU DOBITNIKA");
@@ -252,6 +356,8 @@ function drawCategoryDonut(data) {
     const width = 400;
     const height = 400;
     const radius = Math.min(width, height) / 2;
+
+    const theme = getTheme();
 
     const svg = d3.select("#categoryChart")
         .append("svg")
@@ -273,7 +379,7 @@ function drawCategoryDonut(data) {
 
     const color = d3.scale.linear()
         .domain([min, max])   
-        .range(["#FFF2B2", "#D4AF37"]);
+        .range([theme.accentLight, theme.accent]);
 
     const pie = d3.layout.pie()
         .value(function(d) { return d.values; });
@@ -293,7 +399,7 @@ function drawCategoryDonut(data) {
     
     centerGroup.append("text")
         .attr("text-anchor", "middle")
-        .style("fill", "#D4AF37")
+        .style("fill", theme.accent)
         .style("font-size", "16px")
         .style("font-weight", "bold")
         .text("KATEGORIJE");
@@ -303,7 +409,7 @@ function drawCategoryDonut(data) {
         .style("fill", function(d) {
             return color(d.data.values);
         })
-        .style("stroke", "#0B1F3A")
+        .style("stroke", theme.bgMain || "transparent")
         .style("stroke-width", "2px")
         .on("mouseover", function(d) {
             const originalColor = d3.select(this).style("fill");
@@ -338,7 +444,7 @@ function drawCategoryDonut(data) {
             return "translate(" + arc.centroid(d) + ")";
         })
         .attr("text-anchor", "middle")
-        .style("fill", "#071426")
+        .style("fill", theme.donutText)
         .style("font-weight", "bold")
         .style("font-size", "12px")
         .text(function(d) {

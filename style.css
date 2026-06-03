@@ -8,19 +8,54 @@ light gold:#F2D675
 witheish: #F5F5F5
 */
 
+:root {
+    --bg-main: #0B1F3A;
+    --bg-card: #071426;
+    --text-main: #F5F5F5;
+    --accent: #D4AF37;
+    --accent-light: #F2D675;
+    --tooltip-bg: #071426;
+    --tooltip-text: #F2D675;
+    --donut-text: #071426;
+}
+
+body.light-mode {
+    --bg-main: #F5F5F5;
+    --bg-card: #F5F5F5;
+    --text-main: #071426;
+    --accent: #0B1F3A;
+    --accent-light: #102847;
+    --tooltip-bg: #FFF2B2;
+    --tooltip-text: #071426;
+    --donut-text: #F5F5F5;
+}
+
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background-color: #0B1F3A;
-    color: #F5F5F5;
+    background-color: var(--bg-main);
+    color: var(--text-main);
 }
 
 header {
-    background-color: #071426;
+    background-color: var(--bg-card);
+    border-bottom: 2px solid var(--accent);
     padding: 40px 20px;
     text-align: center;
-    border-bottom: 2px solid #D4AF37;
     box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    position: relative;
+}
+
+#themeToggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 8px 12px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--accent);
+    cursor: pointer;
 }
 
 h1 {
@@ -28,14 +63,14 @@ h1 {
     font-size: 42px;
     font-weight: bold;
     letter-spacing: 1px;
-    color: #D4AF37;
+    color: var(--accent);
 }
 
 h2 {
     margin-top: 12px;
     font-size: 18px;
     font-weight: normal;    
-    color: #D4AF37;
+    color: var(--accent);
 }
 
 #stats-container {
@@ -58,7 +93,7 @@ h2 {
 }
 
 .stat-title {
-    color: #B8C0CC;
+    color: var(--accent);
     font-size: 16px;
     margin-bottom: 15px;
     text-transform: uppercase;
@@ -66,15 +101,19 @@ h2 {
 }
 
 .stat-value {
-    color: #D4AF37;
+    color: var(--accent);
     font-size: 36px;
     font-weight: bold;
 }
 
 #timelineChart {
-    display: flex;
-    justify-content: center;
-    margin: 40px 20px;
+    display: block;
+    padding: 20px;
+    width: 100%;
+}
+
+#timeline-wrapper {
+    width: 100%;
 }
 
 #charts-wrapper {
@@ -88,16 +127,16 @@ h2 {
 
 .chart-container {
     flex: 1;
-    background-color: #071426;
+    background-color: var(--bg-card);
+    border: 1px solid var(--accent);
     padding: 20px;
     border-radius: 8px;
-    border: 1px solid #D4AF37;
 }
 
 .chart-container h2 {
     text-align: center;
     margin-bottom: 20px;
-    color: #D4AF37;
+    color: var(--accent);
     font-size: 18px;
 }
 
@@ -118,12 +157,13 @@ svg text {
 
 #tooltip {
     position: absolute;
-    background: #071426;
-    color: #F2D675;
+    background: var(--tooltip-bg);
+    color: var(--tooltip-text);
+    border: 1px solid var(--accent);
     padding: 6px 10px;
-    border: 1px solid #D4AF37;
     border-radius: 4px;
     font-size: 12px;
     pointer-events: none;
     opacity: 0;
 }
+
