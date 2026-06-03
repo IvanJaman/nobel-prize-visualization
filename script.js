@@ -7,6 +7,20 @@ const themeToggle = document.getElementById("themeToggle");
 
 let cleanedData = [];
 
+let selectedYear = null;
+let focusTimeout = null;
+let timelineSvg;
+let timelineG;
+let xScale;
+let yScale;
+let timelineLine;
+let timelinePath;
+let timelineCircles;
+let yearCounts;
+
+const ZOOM_RANGE = 10; 
+let baseXDomain = null;
+
 //čišćenje podataka
 d3.json(API_URL, function(error, data) {
 
@@ -27,6 +41,7 @@ d3.json(API_URL, function(error, data) {
 
     updateStats(cleanedData);
     drawTimeline(cleanedData);
+    styleXAxisAfterZoom();
     drawCountryChart(cleanedData);
     drawCategoryDonut(cleanedData);
 });
@@ -46,6 +61,7 @@ themeToggle.addEventListener("click", () => {
     d3.select("#categoryChart").html("");
 
     drawTimeline(cleanedData);
+    styleXAxisAfterZoom();
     drawCountryChart(cleanedData);
     drawCategoryDonut(cleanedData);
 });
@@ -94,10 +110,14 @@ function getTheme() {
     };
 }
 
+function getLaureatesByYear(year) {
+    return cleanedData.filter(d => +d.year === year);
+}
+
 //timeline chart
 function drawTimeline(data) {
 
-    const width = 1400;
+    const width = 1800;
     const height = 500;
     const margin = { top: 20, right: 20, bottom: 70, left: 50 };
 
@@ -106,54 +126,48 @@ function drawTimeline(data) {
 
     const theme = getTheme();
 
-    const svg = d3.select("#timelineChart")
+    timelineSvg = d3.select("#timelineChart")
         .append("svg")
         .attr("width", width)
         .attr("height", height);
 
-    const g = svg.append("g")
+    timelineG = timelineSvg.append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const yearCounts = d3.nest()
+    yearCounts = d3.nest()
         .key(d => d.year)
         .rollup(v => v.length)
         .entries(data)
         .filter(d => d.key !== "Unknown")
         .sort((a, b) => +a.key - +b.key);
 
-    const x = d3.scale.linear()
-        .domain(d3.extent(yearCounts, d => +d.key))
-        .range([0, chartWidth]);
-
-    const y = d3.scale.linear()
-        .domain([0, d3.max(yearCounts, d => d.values)])
-        .range([chartHeight, 0]);
-
     xScale = d3.scale.linear()
         .domain(d3.extent(yearCounts, d => +d.key))
         .range([0, chartWidth]);
+
+    baseXDomain = xScale.domain();
 
     yScale = d3.scale.linear()
         .domain([0, d3.max(yearCounts, d => d.values)])
         .range([chartHeight, 0]);
 
-    const line = d3.svg.line()
-        .x(d => x(+d.key))
-        .y(d => y(d.values));
+    timelineLine = d3.svg.line()
+        .x(d => xScale(+d.key))
+        .y(d => yScale(d.values));
 
-    g.append("path")
+    timelinePath = timelineG.append("path")
         .datum(yearCounts)
         .attr("fill", "none")
         .attr("stroke", theme.accent)
         .attr("stroke-width", 4)
-        .attr("d", line);
+        .attr("d", timelineLine);
 
-    g.selectAll("circle")
+    timelineCircles = timelineG.selectAll("circle")
         .data(yearCounts)
         .enter()
         .append("circle")
-        .attr("cx", d => x(+d.key))
-        .attr("cy", d => y(d.values))
+        .attr("cx", d => xScale(+d.key))
+        .attr("cy", d => yScale(d.values))
         .attr("r", 5)
         .attr("fill", theme.accentLight)
         .on("mouseover", function (d) {
@@ -173,6 +187,16 @@ function drawTimeline(data) {
                 .style("left", (d3.event.pageX + 10) + "px")
                 .style("top", (d3.event.pageY - 30) + "px");
         })
+        .on("click", function(d) {
+            selectedYear = +d.key;
+            renderYearDetails(selectedYear);
+            document.getElementById("detailView").style.display = "block";
+            zoomToYear(selectedYear);
+            clearTimeout(focusTimeout);
+            focusTimeout = setTimeout(() => {
+                resetZoom();
+            }, 10000);
+        })
         .on("mouseout", function () {
             d3.select(this)
                 .transition()
@@ -182,14 +206,15 @@ function drawTimeline(data) {
                 .style("opacity", 0);
         });
 
-    g.append("g")
+    timelineG.append("g")
+        .attr("class", "x-axis")
         .attr("transform", `translate(0,${chartHeight})`)
-        .call(d3.svg.axis().scale(x).orient("bottom"))
+        .call(d3.svg.axis().scale(xScale).orient("bottom"))
         .selectAll("text")
         .style("fill", theme.accent)
         .style("font-size", "18px");
 
-    g.append("text")
+    timelineG.append("text")
         .attr("x", chartWidth / 2)
         .attr("y", chartHeight + 60)
         .attr("text-anchor", "middle")
@@ -197,13 +222,13 @@ function drawTimeline(data) {
         .style("font-size", "18px")
         .text("Godine");
 
-    g.append("g")
-        .call(d3.svg.axis().scale(y).orient("left"))
+    timelineG.append("g")
+        .call(d3.svg.axis().scale(yScale).orient("left"))
         .selectAll("text")
         .style("fill", theme.accent)
         .style("font-size", "18px");
 
-    g.append("text")
+    timelineG.append("text")
         .attr("transform", "rotate(-90)")
         .attr("x", -chartHeight / 2)
         .attr("y", -35)
@@ -212,11 +237,11 @@ function drawTimeline(data) {
         .style("font-size", "18px")
         .text("Broj dobitnika");
 
-    g.selectAll(".x.axis, .y.axis")
+    timelineG.selectAll(".x.axis, .y.axis")
     .style("stroke", theme.accent)
     .style("fill", theme.accent);
 
-    g.append("text")
+    timelineG.append("text")
         .attr("x", chartWidth / 2)
         .attr("y", -5)
         .attr("text-anchor", "middle")
@@ -224,6 +249,73 @@ function drawTimeline(data) {
         .style("font-size", "18px")
         .style("font-weight", "bold")
         .text("BROJ DOBITNIKA PO GODINAMA");
+}
+
+function renderYearDetails(year) {
+    const data = getLaureatesByYear(year);
+
+    document.getElementById("detailTitle").textContent =
+        `Dobitnici u ${year}`;
+
+    document.getElementById("detailList").innerHTML =
+        data.map(d => `
+            <div style="padding:10px; border-bottom:1px solid var(--accent);">
+                <strong>${d.name}</strong><br/>
+                Kategorija: ${d.category}<br/>
+                Država: ${d.country}
+            </div>
+        `).join("");
+}
+
+//helper funkcija za ponovno stajlanje x osi
+function styleXAxisAfterZoom() {
+    timelineG.selectAll(".x-axis text")
+        .style("fill", getTheme().accent)
+        .style("font-size", "18px");
+}
+
+//funkcija za zumiranje
+function zoomToYear(year) {
+    const min = Math.max(baseXDomain[0], year - ZOOM_RANGE);
+    const max = Math.min(baseXDomain[1], year + ZOOM_RANGE);
+    xScale.domain([min, max]);
+    const t = timelineSvg.transition().duration(900).ease("cubic-in-out");
+    timelinePath
+        .transition(t)
+        .attr("d", timelineLine);
+
+    timelineCircles
+        .transition(t)
+        .attr("cx", d => xScale(+d.key))
+        .attr("cy", d => yScale(d.values));
+
+    timelineG.select(".x-axis")
+        .transition(t)
+        .call(d3.svg.axis().scale(xScale).orient("bottom"))
+        .each("end", styleXAxisAfterZoom); 
+}
+
+//funkcija za resetiranje zooma timeline grafa
+function resetZoom() {
+    xScale.domain(baseXDomain);
+    const t = timelineSvg.transition().duration(750);
+    timelinePath
+        .transition(t)
+        .attr("d", timelineLine);
+
+    timelineCircles
+        .transition(t)
+        .attr("cx", d => xScale(+d.key))
+        .attr("cy", d => yScale(d.values));
+
+    timelineG.select(".x-axis")
+        .transition(t)
+        .call(d3.svg.axis().scale(xScale).orient("bottom"))
+        .each("end", styleXAxisAfterZoom);
+
+    selectedYear = null;
+    document.getElementById("detailView").style.display = "none";
+    document.getElementById("detailList").innerHTML = "";
 }
 
 //bar chart koji prikazuje top 10 država po broju dobitnika

@@ -107,13 +107,31 @@ h2 {
 }
 
 #timelineChart {
-    display: block;
-    padding: 20px;
-    width: 100%;
+    display: flex;
+    justify-content: center;
 }
 
 #timeline-wrapper {
-    width: 100%;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin-top: 40px;
+    padding: 0 20px;
+}
+
+#timelineBox {
+    flex: 1;
+    min-width: 0;
+}
+
+#detailView {
+    width: 350px;
+    min-width: 350px;
+    max-width: 350px;
+
+    display: none;
+    overflow-y: auto;
+    max-height: 540px;
 }
 
 #charts-wrapper {
