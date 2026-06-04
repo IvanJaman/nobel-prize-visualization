@@ -96,7 +96,18 @@ d3.json(API_URL, function(error, data) {
             country: country,
             region: getRegion(country),
             category: d.nobelPrizes?.[0]?.category?.en || "Unknown",
-            gender: d.gender || "unknown"
+            gender: d.gender || "Unknown",
+            age: (() => {
+                const birthYear = d.birth?.date
+                    ? new Date(d.birth.date).getFullYear()
+                    : null;
+
+                const awardYear = +d.nobelPrizes?.[0]?.awardYear;
+
+                return birthYear && awardYear
+                    ? awardYear - birthYear
+                    : "Unknown";
+            })(),
         };
     });
 
@@ -105,6 +116,8 @@ d3.json(API_URL, function(error, data) {
     styleXAxisAfterZoom();
     drawCountryChart(cleanedData);
     drawCategoryDonut(cleanedData);
+    drawGenderChart(cleanedData);
+    drawAverageAgeChart(cleanedData);
 
     initGenderFilter();
     initRegionFilter();
@@ -125,11 +138,15 @@ themeToggle.addEventListener("click", () => {
     d3.select("#timelineChart").html("");
     d3.select("#countryChart").html("");
     d3.select("#categoryChart").html("");
+    d3.select("#genderChart").html("");
+    d3.select("#ageChart").html("");
 
     drawTimeline(cleanedData);
     styleXAxisAfterZoom();
     drawCountryChart(cleanedData);
     drawCategoryDonut(cleanedData);
+    drawGenderChart(cleanedData);
+    drawAverageAgeChart(cleanedData);
 });
 
 //dinamičko ažuriranje osnovnih statističkih kartica
@@ -322,7 +339,8 @@ function renderYearDetails(year) {
             <div style="padding:10px; border-bottom:1px solid var(--accent);">
                 <strong>${d.name}</strong><br/>
                 Kategorija: ${d.category}<br/>
-                Država: ${d.country}
+                Država: ${d.country}<br/>
+                Dob: ${d.age}
             </div>
         `).join("");
 }
@@ -396,10 +414,15 @@ function refreshDashboard() {
     d3.select("#timelineChart").html("");
     d3.select("#countryChart").html("");
     d3.select("#categoryChart").html("");
+    d3.select("#genderChart").html("");
+    d3.select("#ageChart").html("");
 
     drawTimeline(filtered);
     drawCountryChart(filtered);
     drawCategoryDonut(filtered);
+    drawGenderChart(filtered);
+    drawAverageAgeChart(filtered);
+
     styleXAxisAfterZoom();
 }
 
@@ -685,4 +708,255 @@ function drawCategoryDonut(data) {
                 ? d.data.key.substring(0, 8) + "..."
                 : d.data.key;
         });
+}
+
+//bar chart koji prikazuje raspodjelu spolova
+function drawGenderChart(data) {
+    const width = 800;
+    const height = 400;
+    const margin = { top: 20, right: 20, bottom: 140, left: 60 };
+
+    const theme = getTheme();
+
+    const svg = d3.select("#genderChart")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
+
+    const g = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const decadeData = d3.nest()
+        .key(d => Math.floor(+d.year / 10) * 10)  
+        .rollup(values => {
+            const male = values.filter(v => v.gender === "male").length;
+            const female = values.filter(v => v.gender === "female").length;
+            return {
+                male,
+                female,
+                total: values.length
+            };
+        })
+        .entries(data)
+        .sort((a, b) => +a.key - +b.key);
+
+    const x = d3.scale.ordinal()
+        .domain(decadeData.map(d => d.key))
+        .rangeRoundBands([0, chartWidth], 0.2);
+
+    const y = d3.scale.linear()
+        .domain([0, d3.max(decadeData, d => d.values.total)])
+        .range([chartHeight, 0]);
+
+    g.selectAll(".bar-male")
+        .data(decadeData)
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.key))
+        .attr("y", d => y(d.values.male))
+        .attr("rx", 4)
+        .attr("ry", 4)
+        .attr("width", x.rangeBand() / 2)
+        .attr("height", d => chartHeight - y(d.values.male))
+        .attr("fill", theme.accent)
+        .on("mouseover", function(d) {
+            tooltip
+                .style("opacity", 1)
+                .html(
+                    `<strong>${d.key}te</strong><br/>
+                    Muškaraca: ${d.values.male}<br/>
+                    Žena: ${d.values.female}`
+                );
+        })
+        .on("mousemove", function() {
+            tooltip
+                .style("left", (d3.event.pageX + 10) + "px")
+                .style("top", (d3.event.pageY - 30) + "px");
+        })
+        .on("mouseout", () => tooltip.style("opacity", 0));
+
+    g.selectAll(".bar-female")
+        .data(decadeData)
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.key) + x.rangeBand() / 2)
+        .attr("y", d => y(d.values.female))
+        .attr("rx", 4)
+        .attr("ry", 4)
+        .attr("width", x.rangeBand() / 2)
+        .attr("height", d => chartHeight - y(d.values.female))
+        .attr("fill", theme.accentLight)
+        .on("mouseover", function(d) {
+            tooltip
+                .style("opacity", 1)
+                .html(
+                    `<strong>${d.key}te</strong><br/>
+                    Muškaraca: ${d.values.male}<br/>
+                    Žena: ${d.values.female}`
+                );
+        })
+        .on("mousemove", function() {
+            tooltip
+                .style("left", (d3.event.pageX + 10) + "px")
+                .style("top", (d3.event.pageY - 30) + "px");
+        })
+        .on("mouseout", () => tooltip.style("opacity", 0));
+
+    g.append("g")
+        .attr("transform", `translate(0,${chartHeight})`)
+        .call(d3.svg.axis().scale(x).orient("bottom"))
+        .selectAll("text")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
+        .attr("transform", "rotate(-45)")
+        .style("text-anchor", "end");
+
+    g.append("text")
+        .attr("x", chartWidth - 22)
+        .attr("y", chartHeight + 70)
+        .attr("text-anchor", "middle")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
+        .text("Desetljeća");
+
+    g.append("g")
+        .call(d3.svg.axis().scale(y).orient("left"))
+        .selectAll("text")
+        .style("fill", theme.accent);
+
+    g.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -chartHeight / 2)
+        .attr("y", -45)
+        .attr("text-anchor", "middle")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
+        .text("Broj dobitnika");
+
+    g.append("text")
+        .attr("x", chartWidth / 2)
+        .attr("y", -5)
+        .attr("text-anchor", "middle")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
+        .style("font-weight", "bold")
+        .text("DISTRIBUCIJA SPOLOVA KROZ DESETLJEĆA");
+}
+
+// dobni line chart
+function drawAverageAgeChart(data) {
+    const width = 800;
+    const height = 400;
+    const margin = { top: 20, right: 20, bottom: 70, left: 60 };
+
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
+
+    const theme = getTheme();
+
+    const svg = d3.select("#ageChart")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    const g = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const valid = data.filter(d =>
+        d.age !== "Unknown" && !isNaN(d.age) && d.year !== "Unknown"
+    );
+
+    const yearAvg = d3.nest()
+        .key(d => d.year)
+        .rollup(values => {
+            const ages = values.map(v => +v.age);
+            const avg = d3.mean(ages);
+            return {
+                avg: avg,
+                count: values.length
+            };
+        })
+        .entries(valid)
+        .sort((a, b) => +a.key - +b.key);
+
+    const x = d3.scale.linear()
+        .domain(d3.extent(yearAvg, d => +d.key))
+        .range([0, chartWidth]);
+
+    const y = d3.scale.linear()
+        .domain([0, d3.max(yearAvg, d => d.values.avg)])
+        .range([chartHeight, 0]);
+
+    const line = d3.svg.line()
+        .x(d => x(+d.key))
+        .y(d => y(d.values.avg));
+
+    g.append("path")
+        .datum(yearAvg)
+        .attr("fill", "none")
+        .attr("stroke", theme.accent)
+        .attr("stroke-width", 3)
+        .attr("d", line);
+
+    g.selectAll("circle")
+        .data(yearAvg)
+        .enter()
+        .append("circle")
+        .attr("cx", d => x(+d.key))
+        .attr("cy", d => y(d.values.avg))
+        .attr("r", 4)
+        .attr("fill", theme.accentLight)
+        .on("mouseover", function(d) {
+            d3.select(this).attr("r", 7);
+            tooltip
+                .style("opacity", 1)
+                .html(
+                    `<strong>${d.key}</strong><br/>
+                    Prosječna dob: ${d.values.avg.toFixed(1)}<br/>
+                    Broj dobitnika: ${d.values.count}`
+                );
+        })
+        .on("mousemove", function() {
+            tooltip
+                .style("left", (d3.event.pageX + 10) + "px")
+                .style("top", (d3.event.pageY - 30) + "px");
+        })
+        .on("mouseout", function() {
+            d3.select(this).attr("r", 4);
+            tooltip.style("opacity", 0);
+        });
+
+    const xAxis = d3.svg.axis().scale(x).orient("bottom").tickFormat(d3.format("d"));
+    const yAxis = d3.svg.axis().scale(y).orient("left");
+
+    g.append("g")
+        .attr("transform", `translate(0,${chartHeight})`)
+        .call(xAxis)
+        .selectAll("text")
+        .style("fill", theme.accent);
+
+    g.append("g")
+        .call(yAxis)
+        .selectAll("text")
+        .style("fill", theme.accent);
+
+    g.append("text")
+        .attr("x", chartWidth / 2)
+        .attr("y", chartHeight + 50)
+        .attr("text-anchor", "middle")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
+        .text("Godine");
+
+    g.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -chartHeight / 2)
+        .attr("y", -45)
+        .attr("text-anchor", "middle")
+        .style("fill", theme.accent)
+        .style("font-size", "18px")
+        .text("Prosječna dob");
 }
