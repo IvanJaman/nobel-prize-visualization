@@ -23,6 +23,7 @@ let baseXDomain = null;
 
 let activeGender = "all";
 let activeRegion = "all";
+let activeCategory = "all";
 
 //region maping
 function getRegion(country) {
@@ -33,7 +34,6 @@ function getRegion(country) {
         "Croatia", "Czech Republic", "Finland", "Ireland",
         "Russia", "Ukraine", "Portugal", "Greece"
     ];
-
     const americas = [
         "United States of America",
         "Canada",
@@ -44,7 +44,6 @@ function getRegion(country) {
         "Colombia",
         "Peru"
     ];
-
     const asia = [
         "Japan",
         "China",
@@ -56,7 +55,6 @@ function getRegion(country) {
         "Pakistan",
         "Turkey"
     ];
-
     const africa = [
         "South Africa",
         "Egypt",
@@ -64,7 +62,6 @@ function getRegion(country) {
         "Kenya",
         "Ethiopia"
     ];
-
     const oceania = [
         "Australia",
         "New Zealand"
@@ -111,6 +108,7 @@ d3.json(API_URL, function(error, data) {
 
     initGenderFilter();
     initRegionFilter();
+    initCategoryFilter();
     document.getElementById("resetFiltersBtn").addEventListener("click", resetFilters);
 });
 
@@ -185,7 +183,7 @@ function getLaureatesByYear(year) {
 //timeline chart
 function drawTimeline(data) {
 
-    const width = 1800;
+    const width = 1600;
     const height = 500;
     const margin = { top: 20, right: 20, bottom: 70, left: 50 };
 
@@ -313,7 +311,8 @@ function drawTimeline(data) {
 function renderYearDetails(year) {
     const data = getLaureatesByYear(year)
         .filter(d => activeGender === "all" || d.gender === activeGender)
-        .filter(d => activeRegion === "all" || d.region === activeRegion);
+        .filter(d => activeRegion === "all" || d.region === activeRegion)
+        .filter(d => activeCategory === "all" || d.category === activeCategory);
 
     document.getElementById("detailTitle").textContent =
         `Dobitnici u ${year}`;
@@ -384,7 +383,8 @@ function getFilteredData() {
     return cleanedData.filter(d => {
         const genderMatch = activeGender === "all" || d.gender === activeGender;
         const regionMatch = activeRegion === "all" || d.region === activeRegion;
-        return genderMatch && regionMatch;
+        const categoryMatch = activeCategory === "all" || d.category === activeCategory;
+        return genderMatch && regionMatch && categoryMatch;
     });
 }
 
@@ -407,11 +407,14 @@ function refreshDashboard() {
 function resetFilters() {
     activeGender = "all";
     activeRegion = "all";
+    activeCategory = "all";
 
     d3.selectAll("[data-gender]").classed("active", false);
     d3.select('[data-gender="all"]').classed("active", true);
     d3.selectAll("[data-region]").classed("active", false);
     d3.select('[data-region="all"]').classed("active", true);
+    d3.selectAll("[data-category]").classed("active", false);
+    d3.select('[data-category="all"]').classed("active", true);
 
     document.getElementById("detailView").style.display = "none";
     document.getElementById("detailList").innerHTML = "";
@@ -439,6 +442,17 @@ function initRegionFilter() {
         activeRegion = this.getAttribute("data-region");
 
         d3.selectAll("[data-region]").classed("active", false);
+        d3.select(this).classed("active", true);
+
+        refreshDashboard();
+    });
+}
+
+function initCategoryFilter() {
+    d3.selectAll("[data-category]").on("click", function() {
+        activeCategory = this.getAttribute("data-category");
+
+        d3.selectAll("[data-category]").classed("active", false);
         d3.select(this).classed("active", true);
 
         refreshDashboard();
