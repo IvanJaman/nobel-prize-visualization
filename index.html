@@ -45,7 +45,28 @@
         </section>
 
         <section id="timeline-wrapper">
+            <aside id="filterSidebar">
+                <h2 style="text-align: center;">FILTERI</h2>
+                <button id="resetFiltersBtn">Resetiraj filtere</button>
+                <div class="filter-group">
+                    <div class="filter-group-title">Spol</div>
+                    <button class="filter-btn active" data-gender="all">Svi</button>
+                    <button class="filter-btn" data-gender="male">Muški</button>
+                    <button class="filter-btn" data-gender="female">Ženski</button>
+                </div>
+                <div class="filter-group">
+                    <div class="filter-group-title">Regija</div>
+                    <button class="filter-btn active" data-region="all">Sve</button>
+                    <button class="filter-btn" data-region="Europe">Europa</button>
+                    <button class="filter-btn" data-region="Americas">Amerike</button>
+                    <button class="filter-btn" data-region="Asia">Azija</button>
+                    <button class="filter-btn" data-region="Africa">Afrika</button>
+                    <button class="filter-btn" data-region="Oceania">Oceanija</button>
+                </div>
+            </aside>
+
             <section class="chart-container" id="timelineBox">
+                <h2 id="timelineTitle">BROJ DOBITNIKA PO GODINAMA</h2>
                 <div id="timelineChart"></div>
             </section>
 
@@ -53,7 +74,7 @@
                 <h2 id="detailTitle"></h2>
                 <div id="detailList"></div>
             </section>
-        </section>
+</section>
 
         <section id="charts-wrapper">
             <section class="chart-container">

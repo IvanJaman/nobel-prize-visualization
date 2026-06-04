@@ -119,6 +119,74 @@ h2 {
     padding: 0 20px;
 }
 
+#filterSidebar {
+    width: 110px;
+    min-width: 110px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-self: flex-start;
+}
+
+#resetFiltersBtn {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid var(--accent);
+    border-radius: 5px;
+    background: var(--accent);
+    color: var(--bg-card);
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#resetFiltersBtn:hover {
+    opacity: 0.9;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-group-title {
+    color: var(--accent);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.filter-btn {
+    width: 100%;
+    padding: 5px 8px;
+    border-radius: 5px;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    background: transparent;
+    color: var(--accent);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+}
+
+.filter-btn.active {
+    background: var(--accent);
+    color: var(--bg-card);
+    font-weight: bold;
+    border-color: var(--accent);
+}
+
+.filter-btn:hover:not(.active) {
+    background: rgba(212, 175, 55, 0.12);
+}
+
 #timelineBox {
     flex: 1;
     min-width: 0;

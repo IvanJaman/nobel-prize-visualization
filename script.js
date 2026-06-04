@@ -21,6 +21,64 @@ let yearCounts;
 const ZOOM_RANGE = 10; 
 let baseXDomain = null;
 
+let activeGender = "all";
+let activeRegion = "all";
+
+//region maping
+function getRegion(country) {
+    const europe = [
+        "Germany", "France", "United Kingdom", "Sweden", "Norway",
+        "Denmark", "the Netherlands", "Switzerland", "Austria",
+        "Italy", "Belgium", "Spain", "Poland", "Hungary",
+        "Croatia", "Czech Republic", "Finland", "Ireland",
+        "Russia", "Ukraine", "Portugal", "Greece"
+    ];
+
+    const americas = [
+        "United States of America",
+        "Canada",
+        "Mexico",
+        "Argentina",
+        "Brazil",
+        "Chile",
+        "Colombia",
+        "Peru"
+    ];
+
+    const asia = [
+        "Japan",
+        "China",
+        "India",
+        "Israel",
+        "South Korea",
+        "Singapore",
+        "Taiwan",
+        "Pakistan",
+        "Turkey"
+    ];
+
+    const africa = [
+        "South Africa",
+        "Egypt",
+        "Nigeria",
+        "Kenya",
+        "Ethiopia"
+    ];
+
+    const oceania = [
+        "Australia",
+        "New Zealand"
+    ];
+
+    if (europe.includes(country)) return "Europe";
+    if (americas.includes(country)) return "Americas";
+    if (asia.includes(country)) return "Asia";
+    if (africa.includes(country)) return "Africa";
+    if (oceania.includes(country)) return "Oceania";
+
+    return "Other";
+}
+
 //čišćenje podataka
 d3.json(API_URL, function(error, data) {
 
@@ -31,19 +89,29 @@ d3.json(API_URL, function(error, data) {
 
     const laureates = data.laureates;
 
-    cleanedData = laureates.map(d => ({
-        name: d.fullName?.en || d.knownName?.en || "Unknown",
-        year: d.nobelPrizes?.[0]?.awardYear || "Unknown",
-        country: d.birth?.place?.country?.en || "Unknown",
-        category: d.nobelPrizes?.[0]?.category?.en || "Unknown",
-        gender: d.gender || "unknown"
-    }));
+    cleanedData = laureates.map(d => {
+
+    const country =
+        d.birth?.place?.country?.en || "Unknown";
+        return {
+            name: d.fullName?.en || d.knownName?.en || "Unknown",
+            year: d.nobelPrizes?.[0]?.awardYear || "Unknown",
+            country: country,
+            region: getRegion(country),
+            category: d.nobelPrizes?.[0]?.category?.en || "Unknown",
+            gender: d.gender || "unknown"
+        };
+    });
 
     updateStats(cleanedData);
-    drawTimeline(cleanedData);
+    drawTimeline(getFilteredData());
     styleXAxisAfterZoom();
     drawCountryChart(cleanedData);
     drawCategoryDonut(cleanedData);
+
+    initGenderFilter();
+    initRegionFilter();
+    document.getElementById("resetFiltersBtn").addEventListener("click", resetFilters);
 });
 
 themeToggle.addEventListener("click", () => {
@@ -223,7 +291,7 @@ function drawTimeline(data) {
         .text("Godine");
 
     timelineG.append("g")
-        .call(d3.svg.axis().scale(yScale).orient("left"))
+        .call(d3.svg.axis().scale(yScale).orient("left").tickFormat(d3.format("d")))
         .selectAll("text")
         .style("fill", theme.accent)
         .style("font-size", "18px");
@@ -238,21 +306,14 @@ function drawTimeline(data) {
         .text("Broj dobitnika");
 
     timelineG.selectAll(".x.axis, .y.axis")
-    .style("stroke", theme.accent)
-    .style("fill", theme.accent);
-
-    timelineG.append("text")
-        .attr("x", chartWidth / 2)
-        .attr("y", -5)
-        .attr("text-anchor", "middle")
-        .style("fill", theme.accent)
-        .style("font-size", "18px")
-        .style("font-weight", "bold")
-        .text("BROJ DOBITNIKA PO GODINAMA");
+        .style("stroke", theme.accent)
+        .style("fill", theme.accent);
 }
 
 function renderYearDetails(year) {
-    const data = getLaureatesByYear(year);
+    const data = getLaureatesByYear(year)
+        .filter(d => activeGender === "all" || d.gender === activeGender)
+        .filter(d => activeRegion === "all" || d.region === activeRegion);
 
     document.getElementById("detailTitle").textContent =
         `Dobitnici u ${year}`;
@@ -316,6 +377,72 @@ function resetZoom() {
     selectedYear = null;
     document.getElementById("detailView").style.display = "none";
     document.getElementById("detailList").innerHTML = "";
+}
+
+//dohvaćanje filtriranih podataka
+function getFilteredData() {
+    return cleanedData.filter(d => {
+        const genderMatch = activeGender === "all" || d.gender === activeGender;
+        const regionMatch = activeRegion === "all" || d.region === activeRegion;
+        return genderMatch && regionMatch;
+    });
+}
+
+//osvježavanje dashborda
+function refreshDashboard() {
+    const filtered = getFilteredData();
+    updateStats(filtered);
+
+    d3.select("#timelineChart").html("");
+    d3.select("#countryChart").html("");
+    d3.select("#categoryChart").html("");
+
+    drawTimeline(filtered);
+    drawCountryChart(filtered);
+    drawCategoryDonut(filtered);
+    styleXAxisAfterZoom();
+}
+
+//funkcija za resetiranje filtera
+function resetFilters() {
+    activeGender = "all";
+    activeRegion = "all";
+
+    d3.selectAll("[data-gender]").classed("active", false);
+    d3.select('[data-gender="all"]').classed("active", true);
+    d3.selectAll("[data-region]").classed("active", false);
+    d3.select('[data-region="all"]').classed("active", true);
+
+    document.getElementById("detailView").style.display = "none";
+    document.getElementById("detailList").innerHTML = "";
+    selectedYear = null;
+
+    refreshDashboard();
+    resetZoom();
+}
+
+//inicijalizacija spola
+function initGenderFilter() {
+    d3.selectAll("[data-gender]").on("click", function() {
+        activeGender = this.getAttribute("data-gender");
+
+        d3.selectAll("[data-gender]").classed("active", false);
+        d3.select(this).classed("active", true);
+
+        refreshDashboard();
+    });
+}
+
+//inicijalizacija regije
+function initRegionFilter() {
+    d3.selectAll("[data-region]").on("click", function() {
+        activeRegion = this.getAttribute("data-region");
+
+        d3.selectAll("[data-region]").classed("active", false);
+        d3.select(this).classed("active", true);
+
+        refreshDashboard();
+    });
 }
 
 //bar chart koji prikazuje top 10 država po broju dobitnika
